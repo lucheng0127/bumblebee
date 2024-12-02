@@ -1,0 +1,6 @@
+platform:
+  zone: zone-dev-2
+  master: false
+  port: 7788
+consul:
+  url: http://10.28.4.57:8500
