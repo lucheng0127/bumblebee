@@ -6,6 +6,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type TraceConfig struct {
+	Addr   string `yaml:"rpcAddr"`
+	Enable bool   `yaml:"enable"`
+}
+
 type ConsulConfig struct {
 	Url string `yaml:"url"`
 }
@@ -19,6 +24,7 @@ type PlatformConfig struct {
 type ApiServerConfig struct {
 	Platform *PlatformConfig `yaml:"platform"`
 	Consul   *ConsulConfig   `yaml:"consul"`
+	Trace    *TraceConfig    `yaml:"trace"`
 }
 
 func newApiServerConfig() *ApiServerConfig {

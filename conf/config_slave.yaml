@@ -4,3 +4,6 @@ platform:
   port: 7788
 consul:
   url: http://10.28.4.57:8500
+trace:
+  rpcAddr: 10.28.4.57:4317
+  enable: true

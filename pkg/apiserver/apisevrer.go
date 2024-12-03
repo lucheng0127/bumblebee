@@ -10,10 +10,12 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/lucheng0127/bumblebee/pkg/api/ping"
 	"github.com/lucheng0127/bumblebee/pkg/client/consul"
+	"github.com/lucheng0127/bumblebee/pkg/client/trace"
 	"github.com/lucheng0127/bumblebee/pkg/config"
 	"github.com/lucheng0127/bumblebee/pkg/filters"
 	"github.com/lucheng0127/bumblebee/pkg/utils/host"
 	log "github.com/sirupsen/logrus"
+	otrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 type ApiServer struct {
@@ -22,6 +24,7 @@ type ApiServer struct {
 	Server       http.Server
 	handler      http.Handler
 	Consul       *consul.Consul
+	Tracer       *otrace.TracerProvider
 }
 
 func NewApiServer(cfg *config.ApiServerConfig, docEnable bool) (*ApiServer, error) {
@@ -37,17 +40,28 @@ func NewApiServer(cfg *config.ApiServerConfig, docEnable bool) (*ApiServer, erro
 	}
 	svc.Consul = consulClient
 
+	if cfg.Trace.Enable {
+		tracer, err := trace.NewTrace(cfg.Trace.Addr)
+		if err != nil {
+			return nil, err
+		}
+
+		svc.Tracer = tracer
+	}
+
 	return svc, nil
 }
 
 func (svc *ApiServer) initFilters() {
 	if svc.Config.Platform.Master {
 		svc.handler = filters.WithDispatchByTCP(svc.handler, svc.Consul)
+		svc.handler = filters.WithTrace(svc.handler, svc.Config.Trace.Enable, svc.Config.Platform.Master, svc.Tracer, svc.Config.Platform.Zone)
 		svc.handler = filters.WithAccessLog(svc.handler)
 		svc.handler = filters.WithRequestInfo(svc.handler)
 		// Master generate operation id, slave read from header
 		svc.handler = filters.WithOperationID(svc.handler)
 	} else {
+		svc.handler = filters.WithTrace(svc.handler, svc.Config.Trace.Enable, svc.Config.Platform.Master, svc.Tracer, svc.Config.Platform.Zone)
 		svc.handler = filters.WithAccessLog(svc.handler)
 	}
 }

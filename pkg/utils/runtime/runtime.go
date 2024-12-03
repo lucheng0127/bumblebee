@@ -8,6 +8,8 @@ import (
 
 const (
 	ApiPrefix = "/api"
+
+	TraceServiceName = "apiserver"
 )
 
 func NewApiWebService(group, version string) *restful.WebService {
