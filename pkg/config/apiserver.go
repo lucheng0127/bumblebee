@@ -15,10 +15,17 @@ type ConsulConfig struct {
 	Url string `yaml:"url"`
 }
 
+type AdminUserConfig struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
 type PlatformConfig struct {
-	Zone   string `yaml:"zone"`
-	Master bool   `yaml:"master"`
-	Port   int    `yaml:"port"`
+	Zone      string           `yaml:"zone"`
+	Master    bool             `yaml:"master"`
+	Port      int              `yaml:"port"`
+	Secret    string           `yaml:"secret"`
+	AdminUser *AdminUserConfig `yaml:"adminUser"`
 }
 
 type ApiServerConfig struct {

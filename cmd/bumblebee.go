@@ -13,6 +13,7 @@ func main() {
 	app := &rCli.App{
 		Commands: []*rCli.Command{
 			cli.NewApiServerCmd(),
+			cli.NewUserCmd(),
 		},
 	}
 

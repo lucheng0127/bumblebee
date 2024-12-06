@@ -2,6 +2,10 @@ platform:
   zone: zone-dev-1
   master: true
   port: 7788
+  secret: 9B7B3BF002FBBC72
+  adminUser:
+    username: admin
+    password: 12345678
 consul:
   url: http://10.28.4.57:8500
 trace:

@@ -1,1 +1,4 @@
 .vscode
+bumblebee
+bumblebee.darwin
+cmd/bumblebee.db

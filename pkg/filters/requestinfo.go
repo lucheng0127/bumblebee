@@ -13,8 +13,9 @@ const (
 )
 
 type RequestInfo struct {
-	ZoneRequest bool
-	Zone        string
+	ZoneRequest      bool
+	Zone             string
+	SkipAuthenticate bool
 }
 
 func RequestInfoFromHttpRequest(r *http.Request) *RequestInfo {
@@ -32,8 +33,8 @@ func WithRequestInfo(next http.Handler) http.Handler {
 		currentPaths := strings.Split(r.URL.Path, "/")
 		requestInfo := new(RequestInfo)
 
-		// /api/<group.version>/<resources>
-		if len(currentPaths) < 4 {
+		// /api/<group>/<version>/<resources>
+		if len(currentPaths) < 5 {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("invalidate request URL"))
 			return
@@ -60,6 +61,8 @@ func WithRequestInfo(next http.Handler) http.Handler {
 				w.Write([]byte("invalidate request URL"))
 				return
 			}
+		} else if currentPaths[2] == "iam" {
+			requestInfo.SkipAuthenticate = true
 		}
 
 		ctx := r.Context()

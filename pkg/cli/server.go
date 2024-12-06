@@ -13,13 +13,13 @@ import (
 )
 
 func run(cCtx *rCli.Context) error {
-	apiDocEnable := false
+	debug := false
 
 	// Setup log
 	logLevel := cCtx.String("log-level")
 	switch strings.ToUpper(logLevel) {
 	case "DEBUG":
-		apiDocEnable = true
+		debug = true
 		log.SetLevel(log.DebugLevel)
 	case "INFO":
 		log.SetLevel(log.InfoLevel)
@@ -46,7 +46,7 @@ func run(cCtx *rCli.Context) error {
 	ctx := signals.SetupSignalHandler()
 
 	// Create apiserver and launch
-	svc, err := apiserver.NewApiServer(cfg, apiDocEnable)
+	svc, err := apiserver.NewApiServer(cfg, debug, cCtx.String("database"))
 	if err != nil {
 		return err
 	}
@@ -71,10 +71,16 @@ func NewApiServerCmd() *rCli.Command {
 				Required: true,
 			},
 			&rCli.StringFlag{
-				Name:        "log-level",
-				Aliases:     []string{"l"},
-				Usage:       "log level: debug, info, warn, error",
-				DefaultText: "info",
+				Name:    "log-level",
+				Aliases: []string{"l"},
+				Usage:   "log level: debug, info, warn, error",
+				Value:   "info",
+			},
+			&rCli.StringFlag{
+				Name:    "database",
+				Aliases: []string{"d"},
+				Usage:   "sqlite database file",
+				Value:   "bumblebee.db",
 			},
 		},
 	}

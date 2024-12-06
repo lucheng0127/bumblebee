@@ -14,6 +14,6 @@ const (
 
 func NewApiWebService(group, version string) *restful.WebService {
 	ws := new(restful.WebService)
-	ws.Path(fmt.Sprintf("%s/%s.%s", ApiPrefix, group, version))
+	ws.Path(fmt.Sprintf("%s/%s/%s", ApiPrefix, group, version))
 	return ws
 }
