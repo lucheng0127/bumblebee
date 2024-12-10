@@ -56,7 +56,7 @@ func (c *Consul) ServiceRegistration(ctx context.Context, zone, hostname, addr s
 	for {
 		select {
 		case <-ctx.Done():
-			log.Infof("exit signal recived stop to update TTL to consul service %s", zone)
+			log.Infof("exit signal received stop to update TTL to consul service %s", zone)
 			exit()
 			return
 		case <-ticker.C:

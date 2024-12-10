@@ -11,3 +11,5 @@ consul:
 trace:
   rpcAddr: 10.28.4.57:4317
   enable: true
+nats:
+  url: nats://10.28.4.57:4222

@@ -6,6 +6,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type NatsConfig struct {
+	Url string `yaml:"url"`
+}
+
 type TraceConfig struct {
 	Addr   string `yaml:"rpcAddr"`
 	Enable bool   `yaml:"enable"`
@@ -32,6 +36,7 @@ type ApiServerConfig struct {
 	Platform *PlatformConfig `yaml:"platform"`
 	Consul   *ConsulConfig   `yaml:"consul"`
 	Trace    *TraceConfig    `yaml:"trace"`
+	Nats     *NatsConfig     `yaml:"nats"`
 }
 
 func newApiServerConfig() *ApiServerConfig {

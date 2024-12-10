@@ -3,7 +3,6 @@ package apiserver
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"sync"
 
@@ -14,11 +13,13 @@ import (
 	"github.com/lucheng0127/bumblebee/pkg/client/consul"
 	"github.com/lucheng0127/bumblebee/pkg/client/trace"
 	"github.com/lucheng0127/bumblebee/pkg/config"
+	"github.com/lucheng0127/bumblebee/pkg/dispatch/service"
 	"github.com/lucheng0127/bumblebee/pkg/filters"
 	"github.com/lucheng0127/bumblebee/pkg/models"
 	"github.com/lucheng0127/bumblebee/pkg/utils/host"
 	"github.com/lucheng0127/bumblebee/pkg/utils/jwt"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	otrace "go.opentelemetry.io/otel/sdk/trace"
 	"xorm.io/xorm"
@@ -34,6 +35,8 @@ type ApiServer struct {
 	DBClient      *xorm.Engine
 	Authenticator *jwt.JwtAuthenticator
 	Authorizer    *authorizer.DBAuthorizer
+	Nats          *nats.Conn
+	DispatchSvc   *service.DispatchServer
 }
 
 func NewApiServer(cfg *config.ApiServerConfig, debug bool, database string) (*ApiServer, error) {
@@ -58,6 +61,13 @@ func NewApiServer(cfg *config.ApiServerConfig, debug bool, database string) (*Ap
 		svc.Tracer = tracer
 	}
 
+	natsConn, err := nats.Connect(svc.Config.Nats.Url)
+	if err != nil {
+		return nil, err
+	}
+
+	svc.Nats = natsConn
+
 	if svc.Config.Platform.Master {
 		dbClient, err := xorm.NewEngine("sqlite3", database)
 		if err != nil {
@@ -73,9 +83,11 @@ func NewApiServer(cfg *config.ApiServerConfig, debug bool, database string) (*Ap
 			return nil, err
 		}
 		svc.Authorizer = dbAuthorizer
-	}
 
-	svc.Authenticator = jwt.NewJwtAuthenticator(svc.Config.Platform.Secret, 10, 2)
+		svc.Authenticator = jwt.NewJwtAuthenticator(svc.Config.Platform.Secret, 10, 2)
+
+		svc.DispatchSvc = service.NewDispatchServer(fmt.Sprintf("%s/%s", svc.Config.Platform.Zone, host.GetHostname()), svc.Nats)
+	}
 
 	return svc, nil
 }
@@ -86,7 +98,8 @@ func (svc *ApiServer) syncDB() error {
 
 func (svc *ApiServer) initFilters() {
 	if svc.Config.Platform.Master {
-		svc.handler = filters.WithDispatchByTCP(svc.handler, svc.Consul)
+		// svc.handler = filters.WithDispatchByTCP(svc.handler, svc.Consul)
+		svc.handler = filters.WithDispatchByNats(svc.handler, svc.Consul, svc.DispatchSvc, svc.Config.Platform.Zone)
 		svc.handler = filters.WithAutorizer(svc.handler, svc.Authorizer)
 		svc.handler = filters.WithUserInfo(svc.handler, svc.Authenticator)
 		svc.handler = filters.WithTrace(svc.handler, svc.Config.Trace.Enable, svc.Config.Platform.Master, svc.Tracer, svc.Config.Platform.Zone)
@@ -190,18 +203,23 @@ func (svc *ApiServer) Run(ctx context.Context) error {
 	svc.Server.Handler = svc.handler
 
 	if svc.Config.Platform.Master {
+		wg.Add(1)
+		go svc.DispatchSvc.Run(ctx, func() { wg.Done() })
+
 		svc.Server.Addr = fmt.Sprintf(":%d", svc.Config.Platform.Port)
 		log.Infof("run apiserver master on port %d", svc.Config.Platform.Port)
 		if err := svc.Server.ListenAndServe(); err != nil {
 			return err
 		}
 	} else {
-		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", svc.Config.Platform.Port))
-		if err != nil {
-			return err
-		}
+		//ln, err := net.Listen("tcp", fmt.Sprintf(":%d", svc.Config.Platform.Port))
+		//if err != nil {
+		//	return err
+		//}
+		ln := service.NewClientLinstener(fmt.Sprintf("%s/%s", svc.Config.Platform.Zone, host.GetHostname()), svc.Nats)
 
-		log.Infof("run apiserver slave on port %d", svc.Config.Platform.Port)
+		// log.Infof("run apiserver slave on port %d", svc.Config.Platform.Port)
+		log.Info("run apiserver slave on nats linstener")
 		if err := svc.Server.Serve(ln); err != nil {
 			return err
 		}
